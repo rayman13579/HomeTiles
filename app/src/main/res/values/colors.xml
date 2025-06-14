@@ -13,4 +13,6 @@
     <color name="colorAccent">#03DAC5</color>
     <color name="green">#6BC048</color>
     <color name="red">#C41949</color>
+    <color name="orange">#423C2E</color>
+    <color name="yellow">#FDDF99</color>
 </resources>
