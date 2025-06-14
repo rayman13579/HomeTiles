@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
+
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.HomeTiles"
+        android:usesCleartextTraffic="true">
+
+        <service
+            android:name=".tile.lights.TileLightHall"
+            android:exported="true"
+            android:icon="@drawable/tile_light_off"
+            android:label="Hall"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".tile.lights.TileLightRoom"
+            android:exported="true"
+            android:icon="@drawable/tile_light_off"
+            android:label="Room"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".tile.lights.TileLightOffice"
+            android:exported="true"
+            android:icon="@drawable/tile_light_off"
+            android:label="Office"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".tile.lights.TileLightLED"
+            android:exported="true"
+            android:icon="@drawable/tile_light_off"
+            android:label="LED"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".tile.lights.TileLightKitchen"
+            android:exported="true"
+            android:icon="@drawable/tile_light_off"
+            android:label="Kitchen"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".tile.blinds.up.TileBlindBalconyUp"
+            android:exported="true"
+            android:icon="@drawable/arrow_up"
+            android:label="@string/blind_balcony"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".tile.blinds.down.TileBlindBalconyDown"
+            android:exported="true"
+            android:icon="@drawable/arrow_down"
+            android:label="@string/blind_balcony"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".tile.blinds.position.TileBlindBalconyPosition"
+            android:exported="true"
+            android:icon="@drawable/tile_light_on"
+            android:label="@string/blind_balcony"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".tile.blinds.up.TileBlindKitchenUp"
+            android:exported="true"
+            android:icon="@drawable/arrow_up"
+            android:label="@string/blind_kitchen"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".tile.blinds.down.TileBlindKitchenDown"
+            android:exported="true"
+            android:icon="@drawable/arrow_down"
+            android:label="@string/blind_kitchen"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".tile.blinds.position.TileBlindKitchenPosition"
+            android:exported="true"
+            android:icon="@drawable/tile_light_on"
+            android:label="@string/blind_kitchen"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".tile.blinds.up.TileBlindOfficeUp"
+            android:exported="true"
+            android:icon="@drawable/arrow_up"
+            android:label="@string/blind_office"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".tile.blinds.down.TileBlindOfficeDown"
+            android:exported="true"
+            android:icon="@drawable/arrow_down"
+            android:label="@string/blind_office"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".tile.blinds.position.TileBlindOfficePosition"
+            android:exported="true"
+            android:icon="@drawable/tile_light_on"
+            android:label="@string/blind_office"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".tile.blinds.up.TileBlindRoomUp"
+            android:exported="true"
+            android:icon="@drawable/arrow_up"
+            android:label="@string/blind_room"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".tile.blinds.down.TileBlindRoomDown"
+            android:exported="true"
+            android:icon="@drawable/arrow_down"
+            android:label="@string/blind_room"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".tile.blinds.position.TileBlindRoomPosition"
+            android:exported="true"
+            android:icon="@drawable/tile_light_on"
+            android:label="@string/blind_room"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
+
+    </application>
+
+</manifest>

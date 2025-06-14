@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:theme="@style/Theme.Material3.Dark.NoActionBar">
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1045px" />
+
+    <TextView
+        android:id="@+id/sliderValue"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="100%"
+        android:textColor="@color/blackish"
+        android:textSize="20sp"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="1dp" />
+
+    <com.google.android.material.slider.Slider
+        android:id="@+id/slider"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_below="@id/sliderValue"
+        android:layout_centerHorizontal="true"
+        android:rotation="270"
+        android:translationY="420px"
+        android:valueFrom="0"
+        android:valueTo="100"
+        app:labelBehavior="gone" />
+
+</RelativeLayout>

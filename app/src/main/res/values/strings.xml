@@ -1,0 +1,21 @@
+<resources>
+    <string name="app_name">Home Tiles</string>
+    <string name="token">token</string>
+    <string name="ws_url">url</string>
+    <string name="light_kitchen">kitchen</string>
+    <string name="light_led">led</string>
+    <string name="light_office">office</string>
+    <string name="light_hall">hall</string>
+    <string name="light_room">room</string>
+    <string name="blind_kitchen">Kitchen</string>
+    <string name="blind_balcony">Balcony</string>
+    <string name="blind_office">Office</string>
+    <string name="blind_room">Room</string>
+    <string name="home_wifi_name">Wifi</string>
+    <string name="home_ip_address">10.0.0.246</string>
+    <string name="light_kitchen_url">10.0.0.113</string>
+    <string name="light_led_url">10.0.0.114</string>
+    <string name="light_office_url">10.0.0.115</string>
+    <string name="light_hall_url">10.0.0.116</string>
+    <string name="light_room_url">10.0.0.117</string>
+</resources>
