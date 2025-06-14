@@ -19,6 +19,26 @@
         android:theme="@style/Theme.HomeTiles"
         android:usesCleartextTraffic="true">
 
+        <activity
+            android:name=".SplashActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <service
+            android:name=".controls.DeviceControlsProvider"
+            android:exported="true"
+            android:label="Controls"
+            android:permission="android.permission.BIND_CONTROLS">
+            <intent-filter>
+                <action android:name="android.service.controls.ControlsProviderService" />
+            </intent-filter>
+        </service>
+
         <service
             android:name=".tile.lights.TileLightHall"
             android:exported="true"
