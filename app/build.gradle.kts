@@ -37,6 +37,7 @@ dependencies {
     implementation(libs.material)
     implementation(libs.volley)
     implementation(libs.gson)
+    implementation(libs.rxJava)
     implementation(libs.socketIO) {
         exclude("org.json", "json")
     }
