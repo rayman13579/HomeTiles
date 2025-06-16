@@ -112,14 +112,14 @@ public class DeviceControlsProvider extends ControlsProviderService {
         } else if (action instanceof FloatAction) {
             float position = ((FloatAction) action).getNewValue();
             socket.emit("blindPosition", new JSONObject(Map.of("shelly", name, "position", position)));
-            animateBlind(name, position);
+    //        animateBlind(name, position);
         }
         consumer.accept(ControlAction.RESPONSE_OK);
     }
 
     private Control createStatelessLightControl(String name) {
         String pascalCaseName = name.substring(0, 1).toUpperCase() + name.substring(1);
-        return new Control.StatefulBuilder(name + "Light", getIntent())
+        return new Control.StatelessBuilder(name + "Light", getIntent())
             .setTitle(pascalCaseName)
             .setSubtitle(pascalCaseName + " Light")
             .setDeviceType(DeviceTypes.TYPE_LIGHT)
@@ -142,6 +142,7 @@ public class DeviceControlsProvider extends ControlsProviderService {
                 .setDeviceType(DeviceTypes.TYPE_LIGHT)
                 .setStatus(Control.STATUS_OK)
                 .setControlTemplate(new ToggleTemplate(name + "Light", new ControlButton(light.isOn(), "Toggle")))
+                .setAuthRequired(false)
                 .build();
             processor.onNext(control);
         });
@@ -174,6 +175,7 @@ public class DeviceControlsProvider extends ControlsProviderService {
                 .setStatus(Control.STATUS_OK)
                 .setControlTemplate(new RangeTemplate(name + "Blind", 0, 100, blind.getPosition(), 1, "%.0f%%"))
                 .setCustomColor(ColorStateList.valueOf(ContextCompat.getColor(getApplicationContext(), R.color.orange)))
+                .setAuthRequired(false)
                 .build();
             processor.onNext(control);
         });
@@ -199,11 +201,12 @@ public class DeviceControlsProvider extends ControlsProviderService {
                 .setStatus(Control.STATUS_OK)
                 .setControlTemplate(new RangeTemplate(name + "Blind", 0, 100, blind.getPosition(), 1, "%.0f%%"))
                 .setCustomColor(ColorStateList.valueOf(ContextCompat.getColor(getApplicationContext(), R.color.orange)))
+                .setAuthRequired(false)
                 .build();
             processor.onNext(control);
 
             if (blind.getPosition() != position) {
-                new Handler(Looper.getMainLooper()).postDelayed(() -> animateBlind(name, position), 1500);
+                new Handler(Looper.getMainLooper()).postDelayed(() -> animateBlind(name, position), 500);
             }
         });
     }
