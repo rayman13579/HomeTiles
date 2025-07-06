@@ -27,6 +27,7 @@ import org.reactivestreams.FlowAdapters;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Flow;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -55,14 +56,12 @@ public class DeviceControlsProvider extends ControlsProviderService {
 
     private List<String> blinds;
 
+    private Handler subscriberCheckHandler;
+
     @Override
     public void onCreate() {
         super.onCreate();
-        try {
-            socket = IO.socket(getString(R.string.ws_url));
-            socket.connect();
-        } catch (Exception ignored) {
-        }
+        socket = connectSocket();
         lights = List.of(
             getResources().getString(R.string.light_hall),
             getResources().getString(R.string.light_office),
@@ -75,10 +74,20 @@ public class DeviceControlsProvider extends ControlsProviderService {
             getResources().getString(R.string.blind_kitchen));
     }
 
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-        socket.close();
+    private void initSubscriberCheck() {
+        subscriberCheckHandler = new Handler(Looper.getMainLooper());
+        Runnable subscriberCheckRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (processor.hasSubscribers()) {
+                    subscriberCheckHandler.postDelayed(this, TimeUnit.SECONDS.toMillis(10));
+                } else {
+                    socket.disconnect();
+                }
+            }
+        };
+
+        subscriberCheckHandler.post(subscriberCheckRunnable);
     }
 
     @NonNull
@@ -95,6 +104,10 @@ public class DeviceControlsProvider extends ControlsProviderService {
     @NonNull
     @Override
     public Flow.Publisher<Control> createPublisherFor(@NonNull List<String> controlIds) {
+        initSubscriberCheck();
+        if (!socket.connected()) {
+            socket = connectSocket();
+        }
         if (socket != null) {
             socket.on(Socket.EVENT_CONNECT, args -> {
                 lights.forEach(l -> addLightControl(l, controlIds.contains(l + "Light")));
@@ -112,9 +125,19 @@ public class DeviceControlsProvider extends ControlsProviderService {
         } else if (action instanceof FloatAction) {
             float position = ((FloatAction) action).getNewValue();
             socket.emit("blindPosition", new JSONObject(Map.of("shelly", name, "position", position)));
-    //        animateBlind(name, position);
+            //        animateBlind(name, position);
         }
         consumer.accept(ControlAction.RESPONSE_OK);
+    }
+
+    private Socket connectSocket() {
+        try {
+            socket = IO.socket(getString(R.string.ws_url));
+            socket.connect();
+            return socket;
+        } catch (Exception ignored) {
+            return null;
+        }
     }
 
     private Control createStatelessLightControl(String name) {
