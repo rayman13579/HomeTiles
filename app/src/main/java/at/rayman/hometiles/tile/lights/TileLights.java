@@ -16,7 +16,7 @@ import java.util.Map;
 
 import at.rayman.hometiles.R;
 import at.rayman.hometiles.tile.model.Light;
-import at.rayman.hometiles.util.RestClient;
+import at.rayman.hometiles.network.RestClient;
 import io.socket.client.IO;
 import io.socket.client.Socket;
 
@@ -32,7 +32,7 @@ public abstract class TileLights extends at.rayman.hometiles.tile.Tile {
             IO.Options options = IO.Options.builder()
                 .setExtraHeaders(Map.of("app", List.of("Tiles " + getName())))
                 .build();
-            socket = IO.socket(getString(R.string.ws_url), options);
+            socket = IO.socket(getString(R.string.url), options);
             socket.connect();
             socket.on(Socket.EVENT_CONNECT_ERROR, args -> error());
 

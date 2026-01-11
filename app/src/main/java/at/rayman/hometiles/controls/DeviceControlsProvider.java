@@ -18,50 +18,38 @@ import android.service.controls.templates.ToggleTemplate;
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
+import com.android.volley.DefaultRetryPolicy;
+import com.android.volley.Request;
 
 import org.json.JSONObject;
 import org.reactivestreams.FlowAdapters;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Flow;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import at.rayman.hometiles.R;
-import at.rayman.hometiles.tile.model.Blind;
-import at.rayman.hometiles.tile.model.Light;
-import at.rayman.hometiles.tile.model.State;
-import at.rayman.hometiles.tile.model.StateDeserializer;
+import at.rayman.hometiles.network.JsonRequest;
+import at.rayman.hometiles.network.RestClient;
+import at.rayman.hometiles.network.StringRequest;
 import io.reactivex.rxjava3.core.Flowable;
 import io.reactivex.rxjava3.processors.ReplayProcessor;
-import io.socket.client.IO;
-import io.socket.client.Socket;
 
 public class DeviceControlsProvider extends ControlsProviderService {
 
-    private final Gson gson = new GsonBuilder()
-        .registerTypeAdapter(State.class, new StateDeserializer())
-        .create();
-
     private final ReplayProcessor<Control> processor = ReplayProcessor.create();
-
-    private Socket socket;
 
     private List<String> lights;
 
     private List<String> blinds;
 
-    private Handler subscriberCheckHandler;
-
     @Override
     public void onCreate() {
         super.onCreate();
-        socket = connectSocket();
         lights = List.of(
             getResources().getString(R.string.light_hall),
             getResources().getString(R.string.light_office),
@@ -72,22 +60,6 @@ public class DeviceControlsProvider extends ControlsProviderService {
             getResources().getString(R.string.blind_balcony),
             getResources().getString(R.string.blind_office),
             getResources().getString(R.string.blind_kitchen));
-    }
-
-    private void initSubscriberCheck() {
-        subscriberCheckHandler = new Handler(Looper.getMainLooper());
-        Runnable subscriberCheckRunnable = new Runnable() {
-            @Override
-            public void run() {
-                if (processor.hasSubscribers()) {
-                    subscriberCheckHandler.postDelayed(this, TimeUnit.SECONDS.toMillis(10));
-                } else {
-                    socket.disconnect();
-                }
-            }
-        };
-
-        subscriberCheckHandler.post(subscriberCheckRunnable);
     }
 
     @NonNull
@@ -104,16 +76,8 @@ public class DeviceControlsProvider extends ControlsProviderService {
     @NonNull
     @Override
     public Flow.Publisher<Control> createPublisherFor(@NonNull List<String> controlIds) {
-        initSubscriberCheck();
-        if (!socket.connected()) {
-            socket = connectSocket();
-        }
-        if (socket != null) {
-            socket.on(Socket.EVENT_CONNECT, args -> {
-                lights.forEach(l -> addLightControl(l, controlIds.contains(l + "Light")));
-                blinds.forEach(b -> addBlindControl(b, controlIds.contains(b + "Blind")));
-            });
-        }
+        lights.forEach(l -> addLightControl(l, controlIds.contains(l + "Light")));
+        blinds.forEach(b -> addBlindControl(b, controlIds.contains(b + "Blind")));
         return FlowAdapters.toFlowPublisher(processor);
     }
 
@@ -121,23 +85,16 @@ public class DeviceControlsProvider extends ControlsProviderService {
     public void performControlAction(@NonNull String controlId, @NonNull ControlAction action, @NonNull Consumer<Integer> consumer) {
         String name = controlId.substring(0, controlId.length() - 5);
         if (action instanceof BooleanAction) {
-            socket.emit("toggleLight", new JSONObject(Map.of("shelly", name, "on", !((BooleanAction) action).getNewState())));
+            setLightState(name, ((BooleanAction) action).getNewState())
+                .thenCompose(isOn -> getLightState(name))
+                .thenAccept(isOn -> updateLightControl(name, isOn));
         } else if (action instanceof FloatAction) {
-            float position = ((FloatAction) action).getNewValue();
-            socket.emit("blindPosition", new JSONObject(Map.of("shelly", name, "position", position)));
-            //        animateBlind(name, position);
+            int newPosition = Math.round(((FloatAction) action).getNewValue());
+            setBlindState(name, newPosition)
+                .thenCompose(position -> pollBlindPosition(name, newPosition))
+                .thenAccept(position -> updateBlindControl(name, position));
         }
         consumer.accept(ControlAction.RESPONSE_OK);
-    }
-
-    private Socket connectSocket() {
-        try {
-            socket = IO.socket(getString(R.string.ws_url));
-            socket.connect();
-            return socket;
-        } catch (Exception ignored) {
-            return null;
-        }
     }
 
     private Control createStatelessLightControl(String name) {
@@ -151,24 +108,8 @@ public class DeviceControlsProvider extends ControlsProviderService {
 
     private void addLightControl(String name, boolean valid) {
         if (!valid) return;
-        socket.emit("light", new JSONObject(Map.of("shelly", name)));
-
-        socket.on("light", args -> {
-            Light light = gson.fromJson(args[0].toString(), Light.class);
-
-            if (!light.getShelly().equals(name)) return;
-
-            String pascalCaseName = name.substring(0, 1).toUpperCase() + name.substring(1);
-            Control control = new Control.StatefulBuilder(name + "Light", getIntent())
-                .setTitle(pascalCaseName)
-                .setSubtitle(pascalCaseName + " Light")
-                .setDeviceType(DeviceTypes.TYPE_LIGHT)
-                .setStatus(Control.STATUS_OK)
-                .setControlTemplate(new ToggleTemplate(name + "Light", new ControlButton(light.isOn(), "Toggle")))
-                .setAuthRequired(false)
-                .build();
-            processor.onNext(control);
-        });
+        getLightState(name)
+            .thenAccept(isOn -> updateLightControl(name, isOn));
     }
 
     private Control createStatelessBlindControl(String name) {
@@ -182,57 +123,113 @@ public class DeviceControlsProvider extends ControlsProviderService {
 
     private void addBlindControl(String name, boolean valid) {
         if (!valid) return;
+        getBlindPosition(name)
+            .thenAccept(position -> updateBlindControl(name, position));
+    }
 
-        socket.emit("blind", new JSONObject(Map.of("shelly", name)));
+    private CompletableFuture<Boolean> getLightState(String name) {
+        CompletableFuture<Boolean> result = new CompletableFuture<>();
 
-        socket.on("blind", args -> {
-            Blind blind = gson.fromJson(args[0].toString(), Blind.class);
+        StringRequest stringRequest = new StringRequest(Request.Method.GET, getString(R.string.url) + "/status?shelly=" + name,
+            response -> result.complete(Boolean.valueOf(response)), Throwable::printStackTrace);
 
-            if (!blind.getShelly().equalsIgnoreCase(name)) return;
+        stringRequest.setRetryPolicy(new DefaultRetryPolicy(500, 2, 2));
+        RestClient.getInstance(this).addRequest(stringRequest);
+        return result;
+    }
 
-            String pascalCaseName = name.substring(0, 1).toUpperCase() + name.substring(1);
-            Control control = new Control.StatefulBuilder(name + "Blind", getIntent())
-                .setTitle(pascalCaseName)
-                .setSubtitle(pascalCaseName + " Blind")
-                .setDeviceType(DeviceTypes.TYPE_BLINDS)
-                .setStatus(Control.STATUS_OK)
-                .setControlTemplate(new RangeTemplate(name + "Blind", 0, 100, blind.getPosition(), 1, "%.0f%%"))
-                .setCustomColor(ColorStateList.valueOf(ContextCompat.getColor(getApplicationContext(), R.color.orange)))
-                .setAuthRequired(false)
-                .build();
-            processor.onNext(control);
+    private CompletableFuture<Boolean> setLightState(String name, boolean isOn) {
+        updateLightControl(name, isOn, Control.STATUS_UNKNOWN);
+        CompletableFuture<Boolean> result = new CompletableFuture<>();
+
+        JsonRequest jsonRequest = new JsonRequest(Request.Method.PUT, getString(R.string.url) + "/status",
+            new JSONObject(Map.of("shelly", name, "on", isOn)),
+            response -> result.complete(isOn),
+            error -> updateLightControl(name, isOn, Control.STATUS_ERROR));
+
+        jsonRequest.setRetryPolicy(new DefaultRetryPolicy(500, 2, 2));
+        RestClient.getInstance(this).addRequest(jsonRequest);
+        return result;
+    }
+
+    private void updateLightControl(String name, boolean isOn) {
+        updateLightControl(name, isOn, Control.STATUS_OK);
+    }
+
+    private void updateLightControl(String name, boolean isOn, int status) {
+        String pascalCaseName = name.substring(0, 1).toUpperCase() + name.substring(1);
+        Control control = new Control.StatefulBuilder(name + "Light", getIntent())
+            .setTitle(pascalCaseName)
+            .setSubtitle(pascalCaseName + " Light")
+            .setDeviceType(DeviceTypes.TYPE_LIGHT)
+            .setStatus(status)
+            .setControlTemplate(new ToggleTemplate(name + "Light", new ControlButton(isOn, "Toggle")))
+            .setAuthRequired(false)
+            .build();
+        processor.onNext(control);
+    }
+
+    private CompletableFuture<Integer> getBlindPosition(String name) {
+        CompletableFuture<Integer> result = new CompletableFuture<>();
+
+        StringRequest stringRequest = new StringRequest(Request.Method.GET, getString(R.string.url) + "/position?shelly=" + name,
+            response -> result.complete(Integer.valueOf(response)), Throwable::printStackTrace);
+
+        stringRequest.setRetryPolicy(new DefaultRetryPolicy(500, 2, 2));
+        RestClient.getInstance(this).addRequest(stringRequest);
+        return result;
+    }
+
+    private CompletableFuture<Integer> setBlindState(String name, int position) {
+        CompletableFuture<Integer> result = new CompletableFuture<>();
+
+        JsonRequest jsonRequest = new JsonRequest(Request.Method.PUT, getString(R.string.url) + "/position",
+            new JSONObject(Map.of("shelly", name, "position", position)),
+            response -> result.complete(position),
+            error -> updateBlindControl(name, position, Control.STATUS_ERROR));
+
+        jsonRequest.setRetryPolicy(new DefaultRetryPolicy(500, 2, 2));
+        RestClient.getInstance(this).addRequest(jsonRequest);
+        return result;
+    }
+
+    private CompletableFuture<Integer> pollBlindPosition(String name, int newPosition) {
+        CompletableFuture<Integer> future = new CompletableFuture<>();
+        pollBlindPosition(future, name, newPosition);
+        return future;
+    }
+
+    private void pollBlindPosition(CompletableFuture<Integer> future, String name, int newPosition) {
+        getBlindPosition(name).thenAccept(currentPosition -> {
+            updateBlindControl(name, currentPosition);
+            if (currentPosition == newPosition) {
+                future.complete(currentPosition);
+                return;
+            }
+            new Handler(Looper.getMainLooper()).postDelayed(() -> pollBlindPosition(future, name, newPosition), 500);
         });
+    }
+
+    private void updateBlindControl(String name, int position) {
+        updateBlindControl(name, position, Control.STATUS_OK);
+    }
+
+    private void updateBlindControl(String name, int position, int status) {
+        String pascalCaseName = name.substring(0, 1).toUpperCase() + name.substring(1);
+        Control control = new Control.StatefulBuilder(name + "Blind", getIntent())
+            .setTitle(pascalCaseName)
+            .setSubtitle(pascalCaseName + " Blind")
+            .setDeviceType(DeviceTypes.TYPE_BLINDS)
+            .setStatus(status)
+            .setControlTemplate(new RangeTemplate(name + "Blind", 0, 100, position, 1, "%.0f%%"))
+            .setCustomColor(ColorStateList.valueOf(ContextCompat.getColor(getApplicationContext(), position == 100 ? R.color.yellow : R.color.orange)))
+            .setAuthRequired(false)
+            .build();
+        processor.onNext(control);
     }
 
     private PendingIntent getIntent() {
         return PendingIntent.getActivity(getApplicationContext(), 0, new Intent(), PendingIntent.FLAG_IMMUTABLE);
     }
-
-    private void animateBlind(String name, float position) {
-        socket.emit("blind", new JSONObject(Map.of("shelly", name)));
-
-        socket.on("blind", args -> {
-            Blind blind = gson.fromJson(args[0].toString(), Blind.class);
-
-            if (!blind.getShelly().equalsIgnoreCase(name)) return;
-
-            String pascalCaseName = name.substring(0, 1).toUpperCase() + name.substring(1);
-            Control control = new Control.StatefulBuilder(name + "Blind", getIntent())
-                .setTitle(pascalCaseName)
-                .setSubtitle(pascalCaseName + " Blind")
-                .setDeviceType(DeviceTypes.TYPE_BLINDS)
-                .setStatus(Control.STATUS_OK)
-                .setControlTemplate(new RangeTemplate(name + "Blind", 0, 100, blind.getPosition(), 1, "%.0f%%"))
-                .setCustomColor(ColorStateList.valueOf(ContextCompat.getColor(getApplicationContext(), R.color.orange)))
-                .setAuthRequired(false)
-                .build();
-            processor.onNext(control);
-
-            if (blind.getPosition() != position) {
-                new Handler(Looper.getMainLooper()).postDelayed(() -> animateBlind(name, position), 500);
-            }
-        });
-    }
-
 
 }

@@ -35,7 +35,7 @@ public abstract class Tile extends TileService {
             IO.Options options = IO.Options.builder()
                     .setExtraHeaders(Map.of("app", List.of("Tiles " + getName())))
                     .build();
-            socket = IO.socket(getString(R.string.ws_url), options);
+            socket = IO.socket(getString(R.string.url), options);
             socket.connect();
             socket.on(Socket.EVENT_CONNECT_ERROR, args -> error());
 

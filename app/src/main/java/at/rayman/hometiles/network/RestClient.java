@@ -1,4 +1,4 @@
-package at.rayman.hometiles.util;
+package at.rayman.hometiles.network;
 
 import android.content.Context;
 
